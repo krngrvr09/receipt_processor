@@ -29,21 +29,14 @@ class MyRequestHandler(BaseHTTPRequestHandler):
             # print(receipt_id)
             if receipt_id in data_store:
                 points = data_store[receipt_id].getScore()
-                response_data = {'points': points}
-                self.send_response(200)
-                self.send_header('Content-type', 'application/json')
-                self.end_headers()
-                self.wfile.write(json.dumps(response_data).encode())
+                response = {'points': points}
+                self.send_reply(200, response)
             else:
-                self.send_response(404)
-                self.send_header('Content-type', 'application/json')
-                self.end_headers()
-                self.wfile.write(b'{"message": "No receipt found for that id"}')
+                response = {'message': 'No receipt found for that id'}
+                self.send_reply(404, response)
         else:
-            self.send_response(404)
-            self.send_header('Content-type', 'application/json')
-            self.end_headers()
-            self.wfile.write(b'{"message": "Not Found"}')
+            response = {'message': 'Not Found'}
+            self.send_reply(404, response)
 
     def do_POST(self):
         if self.path == "/receipts/process":
