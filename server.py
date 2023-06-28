@@ -1,6 +1,9 @@
 from http.server import BaseHTTPRequestHandler, HTTPServer
 import json
 import re
+import uuid
+
+data_store = {}
 
 regex_patterns = {
     'retailer': r'^^[\w\s\-]+$',
@@ -21,15 +24,27 @@ def validateItem(item):
             return False
     return True
 
+def getPoints(receipt_data):
+    return 100
+
 # Create a custom request handler by subclassing BaseHTTPRequestHandler
 class MyRequestHandler(BaseHTTPRequestHandler):
     def do_GET(self):
         if self.path.startswith('/receipts/') and self.path.endswith('/points'):
-            # Handle GET requests
-            self.send_response(200)
-            self.send_header('Content-type', 'text/html')
-            self.end_headers()
-            self.wfile.write(b'Hello, GET request!')
+            receipt_id = self.path.split('/')[2]
+            print(receipt_id)
+            if receipt_id in data_store:
+                points = data_store[receipt_id]['points']
+                response_data = {'points': points}
+                self.send_response(200)
+                self.send_header('Content-type', 'application/json')
+                self.end_headers()
+                self.wfile.write(json.dumps(response_data).encode())
+            else:
+                self.send_response(404)
+                self.send_header('Content-type', 'application/json')
+                self.end_headers()
+                self.wfile.write(b'{"message": "No receipt found for that id"}')
         else:
             self.send_response(404)
             self.send_header('Content-type', 'application/json')
@@ -91,11 +106,23 @@ class MyRequestHandler(BaseHTTPRequestHandler):
                             error_data = f'Invalid field: {field}'
                             self.wfile.write(json.dumps({'message': error_message,'data': error_data}).encode())
                             return
+            receipt_id = str(uuid.uuid4())
+            # Store the receipt data in the data store
+            data_store[receipt_id] = {
+                'retailer': receipt_data['retailer'],
+                'purchaseDate': receipt_data['purchaseDate'],
+                'purchaseTime': receipt_data['purchaseTime'],
+                'items': receipt_data['items'],
+                'total': receipt_data['total'],
+                'points': getPoints(receipt_data)  # Replace with actual points calculation logic
+            }
+
+            response_data = {'id': receipt_id}
             self.send_response(200)
-            self.send_header('Content-type', 'text/html')
+            self.send_header('Content-type', 'application/json')
             self.end_headers()
-            self.wfile.write(b'Hello, POST request!')
-            print(f'Received POST data: {post_data.decode()}')
+            self.wfile.write(json.dumps(response_data).encode())
+            
         else:
             self.send_response(404)
             self.send_header('Content-type', 'application/json')
