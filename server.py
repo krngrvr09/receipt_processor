@@ -109,6 +109,20 @@ def getPoints(receipt_data):
     return res
 
 class MyRequestHandler(BaseHTTPRequestHandler):
+
+    def send_reply(self, code, response=None, headers=None):
+        self.send_response(code)
+        if not headers:
+            self.send_header('Content-type', 'application/json')
+            self.end_headers()
+        else:
+            for header, value in headers.items():
+                self.send_header(header, value)
+                self.end_headers()
+        if response is not None:
+            self.wfile.write(json.dumps(response).encode())
+                
+
     def do_GET(self):
         if self.path.startswith('/receipts/') and self.path.endswith('/points'):
             receipt_id = self.path.split('/')[2]
@@ -139,10 +153,8 @@ class MyRequestHandler(BaseHTTPRequestHandler):
             try:
                 receipt_data = json.loads(post_data.decode())
             except json.JSONDecodeError:
-                self.send_response(400)
-                self.send_header('Content-type', 'application/json')
-                self.end_headers()
-                self.wfile.write(b'{"message": " The receipt is invalid"}')
+                response = {'message': 'The receipt is invalid'}
+                self.send_reply(400, response)
                 return
             
             # Check if required fields are present
@@ -150,41 +162,35 @@ class MyRequestHandler(BaseHTTPRequestHandler):
             missing_fields = [field for field in required_fields if field not in receipt_data]
             
             if missing_fields:
-                self.send_response(400)
-                self.send_header('Content-type', 'application/json')
-                self.end_headers()
                 error_message = "The receipt is invalid"
                 error_data = f'Missing fields: {", ".join(missing_fields)}'
-                self.wfile.write(json.dumps({'message': error_message,'data': error_data}).encode())
+                response = {'message': error_message, 'data': error_data}
+                self.send_reply(400, response)
                 return
             
             for field in required_fields:
                 if field in regex_patterns and not re.match(regex_patterns[field], receipt_data[field]):
-                    self.send_response(400)
-                    self.send_header('Content-type', 'application/json')
-                    self.end_headers()
                     error_message = "The receipt is invalid"
                     error_data = f'Invalid field: {field}'
-                    self.wfile.write(json.dumps({'message': error_message,'data': error_data}).encode())
+                    response = {'message': error_message, 'data': error_data}
+                    self.send_reply(400, response)
                     return
                 elif field == "items":
                     if len(receipt_data[field]) == 0:
-                        self.send_response(400)
-                        self.send_header('Content-type', 'application/json')
-                        self.end_headers()
                         error_message = "The receipt is invalid"
                         error_data = f'Invalid field: {field}'
-                        self.wfile.write(json.dumps({'message': error_message,'data': error_data}).encode())
+                        response = {'message': error_message, 'data': error_data}
+                        self.send_reply(400, response)
+                        
                         return
                     
                     for item in receipt_data[field]:
                         if not validateItem(item):
-                            self.send_response(400)
-                            self.send_header('Content-type', 'application/json')
-                            self.end_headers()
                             error_message = "The receipt is invalid"
                             error_data = f'Invalid field: {field}'
-                            self.wfile.write(json.dumps({'message': error_message,'data': error_data}).encode())
+                            response = {'message': error_message, 'data': error_data}
+                            self.send_reply(400, response)
+                            
                             return
             receipt_id = str(uuid.uuid4())
             # Store the receipt data in the data store
@@ -197,17 +203,15 @@ class MyRequestHandler(BaseHTTPRequestHandler):
                 'points': getPoints(receipt_data)  # Replace with actual points calculation logic
             }
 
-            response_data = {'id': receipt_id}
-            self.send_response(200)
-            self.send_header('Content-type', 'application/json')
-            self.end_headers()
-            self.wfile.write(json.dumps(response_data).encode())
+            response = {'id': receipt_id}
+            headers = {'Content-type': 'application/json'}
+            self.send_reply(200, response, headers)
             
         else:
-            self.send_response(404)
-            self.send_header('Content-type', 'application/json')
-            self.end_headers()
-            self.wfile.write(b'{"message": "Not Found"}')
+            error_message = "Not Found"
+            response = {'message': error_message}
+            headers = {'Content-type': 'application/json'}
+            self.send_reply(404, response, headers)
 
 # Set up the server
 server_address = ('', 8000)  # Empty string indicates localhost
