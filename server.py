@@ -4,8 +4,14 @@ import re
 import uuid
 from decimal import Decimal
 import math
+
+
+# The data store is created at the module level, so that
+# it is accessible from multiple request handlers if we choose
+# to scale up our system by adding more request handlers
 data_store = {}
 
+# Regex patterns for validating the attributed in request body
 regex_patterns = {
     'retailer': r'^[\ \S]+$',
     'purchaseDate': r'^\d{4}\-(0[1-9]|1[012])\-(0[1-9]|[12][0-9]|3[01])$',
@@ -15,7 +21,14 @@ regex_patterns = {
     'price': r'^\d+\.\d{2}$'
 }
 
+
 def validateItem(item):
+    """
+    Validates the item object in the request body by checking for missing fields and regex patterns
+
+    :param item: item object in the request body
+    :return: True if the item is valid, False otherwise
+    """
     required_fields = ['shortDescription', 'price']
     missing_fields = [field for field in required_fields if field not in item]
     if missing_fields:
@@ -25,12 +38,19 @@ def validateItem(item):
             return False
     return True
 
+
 def getPointsFromRetailer(retailer):
+    """
+    One point for every alphanumeric character in the retailer name.
+    """
     alphanumeric_count = sum(c.isalnum() for c in retailer)
-    print("alphanumeric_count: ", alphanumeric_count)
     return alphanumeric_count
 
 def getPointsFromTotal(total):
+    """
+    50 points if the total is a round dollar amount with no cents.
+    25 points if the total is a multiple of 0.25.
+    """
     points=0
     cent_val = int(total.split(".")[1])
     if cent_val==0:
@@ -41,6 +61,10 @@ def getPointsFromTotal(total):
     return points
 
 def getPointsFromItems(items):
+    """
+    5 points for every two items on the receipt.
+    If the trimmed length of the item description is a multiple of 3, multiply the price by 0.2 and round up to the nearest integer. The result is the number of points earned.
+    """
     points=0
     item_count = len(items)
     points+=(item_count//2)*5
@@ -51,6 +75,9 @@ def getPointsFromItems(items):
     return points
 
 def getPointsFromDate(purchaseDate):
+    """
+    6 points if the day in the purchase date is odd.
+    """
     points=0
     date_val = int(purchaseDate.split("-")[2])
     if date_val%2==1:
@@ -58,6 +85,9 @@ def getPointsFromDate(purchaseDate):
     return points
 
 def getPointsFromTime(purchaseTime):
+    """
+    10 points if the time of purchase is after 2:00pm and before 4:00pm.
+    """
     points=0
     hour_val = int(purchaseTime.split(":")[0])
     minute_val = int(purchaseTime.split(":")[1])
@@ -67,6 +97,9 @@ def getPointsFromTime(purchaseTime):
 
 
 def getPoints(receipt_data):
+    """
+    Calculates the points earned from the receipt data.
+    """
     res=0
     res+=getPointsFromRetailer(receipt_data['retailer'])
     res+=getPointsFromTotal(receipt_data['total'])
@@ -75,7 +108,6 @@ def getPoints(receipt_data):
     res+=getPointsFromTime(receipt_data['purchaseTime'])
     return res
 
-# Create a custom request handler by subclassing BaseHTTPRequestHandler
 class MyRequestHandler(BaseHTTPRequestHandler):
     def do_GET(self):
         if self.path.startswith('/receipts/') and self.path.endswith('/points'):
