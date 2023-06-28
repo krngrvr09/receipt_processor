@@ -2,11 +2,12 @@ from http.server import BaseHTTPRequestHandler, HTTPServer
 import json
 import re
 import uuid
-
+from decimal import Decimal
+import math
 data_store = {}
 
 regex_patterns = {
-    'retailer': r'^^[\w\s\-]+$',
+    'retailer': r'^[\ \S]+$',
     'purchaseDate': r'^\d{4}\-(0[1-9]|1[012])\-(0[1-9]|[12][0-9]|3[01])$',
     'purchaseTime': r'^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$',
     'total': r'^\d+\.\d{2}$',
@@ -24,8 +25,55 @@ def validateItem(item):
             return False
     return True
 
+def getPointsFromRetailer(retailer):
+    alphanumeric_count = sum(c.isalnum() for c in retailer)
+    print("alphanumeric_count: ", alphanumeric_count)
+    return alphanumeric_count
+
+def getPointsFromTotal(total):
+    points=0
+    cent_val = int(total.split(".")[1])
+    if cent_val==0:
+        points+=50
+    if cent_val in [0,25,50,75]:
+        points+=25
+    
+    return points
+
+def getPointsFromItems(items):
+    points=0
+    item_count = len(items)
+    points+=(item_count//2)*5
+    for item in items:
+        if len(item["shortDescription"].strip())%3==0:
+            decimal_value = Decimal(item["price"])
+            points+=math.ceil(decimal_value*Decimal(0.2))
+    return points
+
+def getPointsFromDate(purchaseDate):
+    points=0
+    date_val = int(purchaseDate.split("-")[2])
+    if date_val%2==1:
+        points=6
+    return points
+
+def getPointsFromTime(purchaseTime):
+    points=0
+    hour_val = int(purchaseTime.split(":")[0])
+    minute_val = int(purchaseTime.split(":")[1])
+    if hour_val==15 or (hour_val==14 and minute_val>0):
+        points=10
+    return points
+
+
 def getPoints(receipt_data):
-    return 100
+    res=0
+    res+=getPointsFromRetailer(receipt_data['retailer'])
+    res+=getPointsFromTotal(receipt_data['total'])
+    res+=getPointsFromItems(receipt_data['items'])
+    res+=getPointsFromDate(receipt_data['purchaseDate'])
+    res+=getPointsFromTime(receipt_data['purchaseTime'])
+    return res
 
 # Create a custom request handler by subclassing BaseHTTPRequestHandler
 class MyRequestHandler(BaseHTTPRequestHandler):
