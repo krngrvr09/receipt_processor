@@ -41,13 +41,14 @@ class MyRequestHandler(BaseHTTPRequestHandler):
 
         if self.path.startswith('/receipts/') and self.path.endswith('/points'):
             receipt_id = self.path.split('/')[2]
-            if receipt_id in data_store:
-                points = data_store[receipt_id].getScore()
-                response = {'points': points}
-                self.send_reply(200, response)
-            else:
+            if receipt_id not in data_store:
                 response = {'message': 'No receipt found for that id'}
                 self.send_reply(404, response)
+                return
+            
+            points = data_store[receipt_id].getScore()
+            response = {'points': points}
+            self.send_reply(200, response)
         else:
             response = {'message': 'Not Found'}
             self.send_reply(404, response)
@@ -65,13 +66,12 @@ class MyRequestHandler(BaseHTTPRequestHandler):
             
             try:
                 receipt_data = json.loads(post_data.decode())
-            except json.JSONDecodeError:
+                receipt = Receipt(receipt_data)
+                receipt.calculateScore()
+            except Exception as e:
                 response = {'message': 'The receipt is invalid'}
                 self.send_reply(400, response)
-                return
-            
-            receipt = Receipt(receipt_data)
-            receipt.calculateScore()
+                return            
 
             data_store[receipt.id] = receipt
 

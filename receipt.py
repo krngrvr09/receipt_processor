@@ -7,14 +7,6 @@ import math
 class Receipt:
     """Receipt class to store receipt data and calculate points."""
 
-    id=None
-    retailer=None
-    purchaseDate=None
-    purchaseTime=None
-    items=[]
-    total=None
-    score=None
-
     def __init__(self, receipt_json):
         """
         Initialize a Receipt object from a JSON object. The JSON object must have the following fields:
@@ -42,6 +34,7 @@ class Receipt:
             self.validPattern("total", receipt_json["total"])
         self.total = receipt_json["total"]
 
+        self.items = []
         assert "items" in receipt_json and \
             isinstance(receipt_json["items"], list) and \
             len(receipt_json["items"])>0
@@ -147,9 +140,6 @@ class Receipt:
 
 class Item:
     """Item class to store item data."""
-
-    shortDescription=None
-    price=None
 
     def __init__(self, item_json):
         """
