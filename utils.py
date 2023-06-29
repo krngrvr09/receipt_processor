@@ -7,5 +7,7 @@ regex_patterns = {
     'purchaseTime': r'^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$',
     'total': r'^\d+\.\d{2}$',
     'shortDescription': r'^[\w\s\-]+$',
-    'price': r'^\d+\.\d{2}$'
+    'price': r'^\d+\.\d{2}$',
+    'get_endpoint': r'^/receipts/[^/]+/points$',
+    'id': r'^\S+$'
 }

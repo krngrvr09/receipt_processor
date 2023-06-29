@@ -5,17 +5,22 @@ from decimal import Decimal
 import math
 
 class Receipt:
-    """Receipt class to store receipt data and calculate points."""
+    """
+    Receipt class to store receipt data and calculate points.
+    
+    Attributes:
+        id (str): A unique identifier for the receipt.
+        retailer (str): The name of the retailer.
+        purchaseDate (str): The date of the purchase in the format YYYY-MM-DD.
+        purchaseTime (str): The time of the purchase in the format HH:MM or H:MM.
+        total (str): The total amount of the purchase in the format (D+).DD.
+        items (list): A list of items purchased.
+        score (int): The number of points earned from the receipt.
+    """
 
     def __init__(self, receipt_json):
         """
-        Initialize a Receipt object from a JSON object. The JSON object must have the following fields:
-
-        - retailer: The name of the retailer.
-        - purchaseDate: The date of the purchase in the format YYYY-MM-DD.
-        - purchaseTime: The time of the purchase in the format HH:MM or H:MM.
-        - total: The total amount of the purchase in the format (D+).DD.
-        - items: A list of items purchased.
+        Initialize a Receipt object from a JSON object. The JSON object must have the following fields: retailer, purchaseDate, purchaseTime, total, and items.
         """
 
         assert "retailer" in receipt_json and \
@@ -42,6 +47,7 @@ class Receipt:
             self.items.append(Item(item))
 
         self.id = str(uuid.uuid4())
+        self.score = None
 
 
     def validPattern(self, field, value):
@@ -86,8 +92,8 @@ class Receipt:
         points+=(item_count//2)*5
         for item in self.items:
             if len(item.shortDescription.strip())%3==0:
-                decimal_value = Decimal(item.price)
-                points+=math.ceil(decimal_value*Decimal(0.2))
+                decimal_price = Decimal(item.price)
+                points+=math.ceil(decimal_price*Decimal(0.2))
         return points
 
 
@@ -99,7 +105,7 @@ class Receipt:
         points=0
         date_val = int(self.purchaseDate.split("-")[2])
         if date_val%2==1:
-            points=6
+            points+=6
         return points
 
 
@@ -112,7 +118,7 @@ class Receipt:
         hour_val = int(self.purchaseTime.split(":")[0])
         minute_val = int(self.purchaseTime.split(":")[1])
         if hour_val==15 or (hour_val==14 and minute_val>0):
-            points=10
+            points+=10
         return points
 
 
@@ -139,14 +145,17 @@ class Receipt:
         return self.score
 
 class Item:
-    """Item class to store item data."""
+    """
+    Item class to store item data.
+    
+    Attributes:
+        shortDescription (str): A short description of the item.
+        price (str): The price of the item in the format (D+).DD.
+    """
 
     def __init__(self, item_json):
         """
-        Initialize an Item object from a JSON object. The JSON object must have the following fields:
-
-        - shortDescription: A short description of the item.
-        - price: The price of the item in the format (D+).DD.
+        Initialize an Item object from a JSON object. The JSON object must have the following fields: shortDescription and price.
         """
 
         assert "shortDescription" in item_json and \

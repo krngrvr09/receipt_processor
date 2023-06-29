@@ -1,7 +1,8 @@
 from http.server import BaseHTTPRequestHandler, HTTPServer
 import json
 from receipt import Receipt
-
+from utils import regex_patterns
+import re
 
 # The data store is created at the module level, so that
 # it is accessible from multiple request handlers if we choose
@@ -39,12 +40,13 @@ class MyRequestHandler(BaseHTTPRequestHandler):
         The only GET request that is supported is /receipts/<id>/points.
         """
 
-        if self.path.startswith('/receipts/') and self.path.endswith('/points'):
+        if re.match(regex_patterns['get_endpoint'], self.path):
             receipt_id = self.path.split('/')[2]
-            if receipt_id not in data_store:
-                response = {'message': 'No receipt found for that id'}
-                self.send_reply(404, response)
-                return
+            if not re.match(regex_patterns["id"], receipt_id) or \
+                receipt_id not in data_store:
+                    response = {'message': 'No receipt found for that id'}
+                    self.send_reply(404, response)
+                    return
             
             points = data_store[receipt_id].getScore()
             response = {'points': points}
